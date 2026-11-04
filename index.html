@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tabel Periodik Interaktif</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1a1d21;--card:#fff;--mut:#5b6470;--bd:#d9dde3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161a;--fg:#eceef1;--card:#1f2228;--mut:#a0a8b4;--bd:#343942;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14161a;--fg:#eceef1;--card:#1f2228;--mut:#a0a8b4;--bd:#343942;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+h1{font-size:1.3rem;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 12px;font-size:.9rem}
+.top{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input{flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);font-size:.95rem}
+#info{display:flex;gap:16px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px;align-items:flex-start;flex-wrap:wrap}
+#big{width:104px;height:104px;border-radius:10px;color:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+#big b{font-size:2.4rem;line-height:1}#big small{font-size:.8rem}
+#v3d{width:200px;height:200px;flex:none;border-radius:10px;background:var(--bg);border:1px solid var(--bd);touch-action:none;cursor:grab;position:relative;overflow:hidden}
+#v3d::after{content:"Seret untuk memutar";position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:.65rem;color:var(--mut);pointer-events:none}
+#v3d canvas{display:block}
+#tg{position:absolute;top:4px;left:4px;z-index:2;display:flex;gap:3px}
+#tg button{all:unset;cursor:pointer;font-size:.68rem;padding:3px 8px;border-radius:999px;background:var(--card);border:1px solid var(--bd);color:var(--fg)}
+#tg button.on{background:var(--fg);color:var(--bg)}
+#txt{flex:1;min-width:220px}
+#txt h2{margin:0 0 6px;font-size:1.2rem}
+#txt p{margin:0 0 8px;line-height:1.5}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.meta span{font-size:.8rem;background:var(--bg);border:1px solid var(--bd);border-radius:999px;padding:3px 10px}
+.wrap{overflow-x:auto;padding-bottom:8px}
+#tbl{display:grid;grid-template-columns:repeat(18,minmax(40px,1fr));grid-template-rows:repeat(7,auto) 12px auto auto;gap:3px;min-width:760px}
+.el{all:unset;box-sizing:border-box;cursor:pointer;color:#111;border-radius:5px;padding:3px 2px;text-align:center;min-height:50px;display:flex;flex-direction:column;justify-content:center;border:2px solid transparent}
+.el:focus-visible,.el.sel{border-color:var(--fg)}
+.el i{font-style:normal;font-size:.6rem;opacity:.75}
+.el b{font-size:.95rem}
+.el small{font-size:.5rem;opacity:.8;overflow:hidden;white-space:nowrap}
+.el.dim{opacity:.18}
+#leg{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+#leg button{all:unset;cursor:pointer;font-size:.78rem;color:#111;padding:4px 10px;border-radius:999px;border:2px solid transparent}
+#leg button.on{border-color:var(--fg)}
+</style>
+</head>
+<body>
+<h1>Tabel Periodik Interaktif</h1>
+<p class="sub">Klik unsur untuk melihat kandungan dan penjelasannya. Cari berdasarkan nama, simbol, atau nomor atom.</p>
+<div class="top"><input id="q" type="search" placeholder="Cari unsur, mis. Besi, Au, 26"></div>
+<div id="info"><div id="big"></div><div id="v3d"><div id="tg"><button data-m="atom" class="on">Atom</button><button data-m="zat">Wujud zat</button></div></div><div id="txt"></div></div>
+<div class="wrap"><div id="tbl"></div></div>
+<div id="leg"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const RAW=`H|Hidrogen|1,008|Unsur teringan dan paling melimpah di alam semesta; bahan bakar bintang.
+He|Helium|4,0026|Gas mulia yang inert, dipakai untuk balon dan pendingin MRI.
+Li|Litium|6,94|Logam teringan; bahan utama baterai isi ulang.
+Be|Berilium|9,012|Logam ringan dan kaku, dipakai di industri dirgantara.
+B|Boron|10,81|Metaloid untuk kaca borosilikat dan pupuk.
+C|Karbon|12,011|Dasar kehidupan; ada sebagai grafit dan berlian.
+N|Nitrogen|14,007|Menyusun 78% udara; bahan pupuk dan protein.
+O|Oksigen|15,999|Diperlukan untuk pernapasan dan pembakaran.
+F|Fluor|18,998|Unsur paling elektronegatif; fluorida ada di pasta gigi.
+Ne|Neon|20,180|Gas mulia untuk lampu reklame merah-oranye.
+Na|Natrium|22,990|Logam sangat reaktif; bagian dari garam dapur.
+Mg|Magnesium|24,305|Logam ringan; pusat molekul klorofil pada tumbuhan.
+Al|Aluminium|26,982|Logam ringan antikarat untuk kaleng dan pesawat.
+Si|Silikon|28,085|Bahan utama chip elektronik dan kaca.
+P|Fosfor|30,974|Penting untuk DNA, ATP, dan pupuk.
+S|Belerang|32,06|Zat kuning untuk asam sulfat dan vulkanisasi karet.
+Cl|Klor|35,45|Pembasmi kuman air kolam dan bahan PVC.
+Ar|Argon|39,948|Gas mulia untuk pengelasan dan lampu pijar.
+K|Kalium|39,098|Penting bagi saraf dan otot; banyak di pisang.
+Ca|Kalsium|40,078|Pembentuk tulang, gigi, dan cangkang.
+Sc|Skandium|44,956|Paduan ringan untuk peralatan olahraga.
+Ti|Titanium|47,867|Kuat, ringan, tahan korosi; implan dan pesawat.
+V|Vanadium|50,942|Menguatkan baja perkakas.
+Cr|Kromium|51,996|Pelapis krom dan bahan baja tahan karat.
+Mn|Mangan|54,938|Menguatkan baja dan bahan baterai.
+Fe|Besi|55,845|Dasar baja; ada di hemoglobin darah.
+Co|Kobalt|58,933|Dipakai di baterai dan pigmen biru.
+Ni|Nikel|58,693|Bahan baja tahan karat dan pelapis; Indonesia produsen besar.
+Cu|Tembaga|63,546|Penghantar listrik dan panas yang baik.
+Zn|Seng|65,38|Pelapis antikarat (galvanis) dan penting bagi imun.
+Ga|Galium|69,723|Meleleh di telapak tangan; dipakai di LED.
+Ge|Germanium|72,630|Semikonduktor dan serat optik.
+As|Arsen|74,922|Metaloid beracun; dulu dipakai sebagai racun dan pestisida.
+Se|Selenium|78,971|Nutrisi mikro dan bahan sel surya.
+Br|Brom|79,904|Cairan merah-cokelat; bahan penghambat api.
+Kr|Kripton|83,798|Gas mulia untuk lampu dan laser.
+Rb|Rubidium|85,468|Logam sangat reaktif; dipakai di jam atom.
+Sr|Stronsium|87,62|Memberi warna merah pada kembang api.
+Y|Itrium|88,906|Bahan fosfor layar dan laser.
+Zr|Zirkonium|91,224|Tahan korosi; pelapis bahan bakar reaktor.
+Nb|Niobium|92,906|Paduan baja dan magnet superkonduktor.
+Mo|Molibdenum|95,95|Menguatkan baja bersuhu tinggi.
+Tc|Teknesium|98|Unsur buatan pertama; dipakai untuk pencitraan medis.
+Ru|Rutenium|101,07|Logam mulia untuk kontak listrik.
+Rh|Rodium|102,91|Logam mulia di katalis knalpot.
+Pd|Paladium|106,42|Katalis dan konverter katalitik.
+Ag|Perak|107,87|Penghantar listrik terbaik; perhiasan dan cermin.
+Cd|Kadmium|112,41|Beracun; dipakai di baterai Ni-Cd.
+In|Indium|114,82|Lapisan layar sentuh (ITO).
+Sn|Timah|118,71|Pelapis kaleng dan bahan solder.
+Sb|Antimon|121,76|Penghambat api dan campuran logam.
+Te|Telurium|127,60|Bahan sel surya dan paduan.
+I|Yodium|126,90|Penting bagi tiroid; ada di garam beryodium.
+Xe|Xenon|131,29|Gas mulia untuk lampu sorot dan mesin ion.
+Cs|Sesium|132,91|Dasar definisi satu detik pada jam atom.
+Ba|Barium|137,33|Dipakai sebagai kontras rontgen saluran cerna.
+La|Lantanum|138,91|Lensa kamera dan baterai hibrida.
+Ce|Serium|140,12|Batu korek api dan pemoles kaca.
+Pr|Praseodimium|140,91|Bahan magnet dan kaca kuning-hijau.
+Nd|Neodimium|144,24|Magnet kuat untuk motor dan headphone.
+Pm|Prometium|145|Radioaktif; dipakai pada cat berpendar.
+Sm|Samarium|150,36|Bahan magnet samarium-kobalt.
+Eu|Europium|151,96|Memberi warna merah pada layar.
+Gd|Gadolinium|157,25|Zat kontras pada MRI.
+Tb|Terbium|158,93|Fosfor hijau pada layar.
+Dy|Disprosium|162,50|Magnet tahan panas.
+Ho|Holmium|164,93|Memiliki momen magnet tertinggi; laser medis.
+Er|Erbium|167,26|Penguat sinyal serat optik.
+Tm|Tulium|168,93|Sumber sinar-X portabel.
+Yb|Iterbium|173,05|Jam atom dan laser.
+Lu|Lutesium|174,97|Dipakai pada pencitraan PET scan.
+Hf|Hafnium|178,49|Batang kendali reaktor dan chip.
+Ta|Tantalum|180,95|Kapasitor ponsel dan implan medis.
+W|Tungsten|183,84|Titik leleh tertinggi; filamen lampu.
+Re|Renium|186,21|Dipakai pada mesin jet bersuhu tinggi.
+Os|Osmium|190,23|Unsur terpadat di alam.
+Ir|Iridium|192,22|Sangat tahan korosi; busi dan mata pena.
+Pt|Platina|195,08|Logam mulia untuk perhiasan dan katalis.
+Au|Emas|196,97|Logam mulia tak berkarat; perhiasan dan elektronik.
+Hg|Raksa|200,59|Satu-satunya logam cair pada suhu kamar; beracun.
+Tl|Talium|204,38|Sangat beracun; dulu dipakai sebagai racun tikus.
+Pb|Timbal|207,2|Berat dan beracun; aki dan perisai radiasi.
+Bi|Bismut|208,98|Logam berdaya racun rendah; obat lambung.
+Po|Polonium|209|Sangat radioaktif; ditemukan oleh Marie Curie.
+At|Astatin|210|Salah satu unsur alami paling langka.
+Rn|Radon|222|Gas radioaktif yang keluar dari tanah dan batuan.
+Fr|Fransium|223|Sangat langka dan radioaktif.
+Ra|Radium|226|Radioaktif; dulu dipakai pada cat jam berpendar.
+Ac|Aktinium|227|Radioaktif; berpendar kebiruan.
+Th|Torium|232,04|Calon bahan bakar nuklir.
+Pa|Protaktinium|231,04|Langka dan radioaktif.
+U|Uranium|238,03|Bahan bakar reaktor nuklir.
+Np|Neptunium|237|Unsur transuranium pertama.
+Pu|Plutonium|244|Bahan bakar nuklir dan senjata.
+Am|Amerisium|243|Ada di detektor asap.
+Cm|Kurium|247|Dinamai untuk Marie dan Pierre Curie.
+Bk|Berkelium|247|Unsur sintetis untuk riset.
+Cf|Kalifornium|251|Sumber neutron.
+Es|Einsteinium|252|Pertama ditemukan di sisa uji bom hidrogen.
+Fm|Fermium|257|Unsur sintetis berat.
+Md|Mendelevium|258|Dinamai untuk Mendeleev, pencipta tabel periodik.
+No|Nobelium|259|Unsur sintetis, dinamai untuk Alfred Nobel.
+Lr|Lawrensium|266|Unsur sintetis terakhir dari deret aktinida.
+Rf|Rutherfordium|267|Sintetis dengan waktu paruh singkat.
+Db|Dubnium|268|Sintetis, dinamai untuk kota Dubna.
+Sg|Seaborgium|269|Dinamai untuk Glenn Seaborg.
+Bh|Bohrium|270|Dinamai untuk Niels Bohr.
+Hs|Hasium|277|Dinamai untuk negara bagian Hesse, Jerman.
+Mt|Meitnerium|278|Dinamai untuk Lise Meitner.
+Ds|Darmstadtium|281|Dinamai untuk kota Darmstadt.
+Rg|Roentgenium|282|Dinamai untuk Wilhelm Röntgen.
+Cn|Kopernisium|285|Dinamai untuk Nicolaus Copernicus.
+Nh|Nihonium|286|Dinamai untuk Jepang (Nihon).
+Fl|Flerovium|289|Dinamai untuk laboratorium Flerov.
+Mc|Moskovium|290|Dinamai untuk wilayah Moskow.
+Lv|Livermorium|293|Dinamai untuk laboratorium Lawrence Livermore.
+Ts|Tenesin|294|Dinamai untuk negara bagian Tennessee.
+Og|Oganeson|294|Unsur terberat yang diketahui.`;
+const D=RAW.split("\n").map(l=>l.split("|"));
+const C={a:["Logam alkali","#ff9d8a"],e:["Alkali tanah","#ffc58a"],t:["Logam transisi","#ffe08a"],p:["Logam pasca-transisi","#c9e08a"],m:["Metaloid","#8fe0c0"],n:["Nonlogam","#8ad4ff"],h:["Halogen","#a8b8ff"],g:["Gas mulia","#d4a8ff"],l:["Lantanida","#ffa8d4"],c:["Aktinida","#e0b8a0"]};
+const S=(s)=>s.split(",").map(Number);
+function cat(n){
+ if(S("3,11,19,37,55,87").includes(n))return"a";
+ if(S("4,12,20,38,56,88").includes(n))return"e";
+ if(S("5,14,32,33,51,52").includes(n))return"m";
+ if(S("1,6,7,8,15,16,34").includes(n))return"n";
+ if(S("9,17,35,53,85,117").includes(n))return"h";
+ if(S("2,10,18,36,54,86,118").includes(n))return"g";
+ if(n>=57&&n<=71)return"l";
+ if(n>=89&&n<=103)return"c";
+ if(S("13,31,49,50,81,82,83,84,113,114,115,116").includes(n))return"p";
+ return"t";
+}
+function pos(n){
+ if(n<=2)return[1,n==1?1:18];
+ if(n<=4)return[2,n-2];
+ if(n<=10)return[2,n+8];
+ if(n<=12)return[3,n-10];
+ if(n<=18)return[3,n];
+ if(n<=36)return[4,n-18];
+ if(n<=54)return[5,n-36];
+ if(n<=56)return[6,n-54];
+ if(n<=70)return[9,n-54];
+ if(n<=86)return[6,n-68];
+ if(n<=88)return[7,n-86];
+ if(n<=102)return[10,n-86];
+ return[7,n-100];
+}
+function fase(n){
+ if(S("1,2,7,8,9,10,17,18,36,54,86").includes(n))return"Gas";
+ if(S("35,80").includes(n))return"Cair";
+ return n>=104?"Belum diketahui":"Padat";
+}
+const tbl=document.getElementById("tbl"),info=document.getElementById("info"),q=document.getElementById("q"),leg=document.getElementById("leg");
+let filter=null,btns=[];
+D.forEach((d,i)=>{
+ const n=i+1,[r,c]=pos(n),k=cat(n);
+ const b=document.createElement("button");
+ b.className="el";b.style.gridRow=r;b.style.gridColumn=c;b.style.background=C[k][1];
+ b.innerHTML=`<i>${n}</i><b>${d[0]}</b><small>${d[1]}</small>`;
+ b.onclick=()=>show(n);
+ tbl.appendChild(b);btns.push(b);
+});
+function show(n){
+ const d=D[n-1],k=cat(n),[r,c]=pos(n);
+ btns.forEach((b,i)=>b.classList.toggle("sel",i==n-1));
+ const f=(n>=57&&n<=70)||(n>=89&&n<=102);
+ const golongan=f?"Blok-f":c;
+ const periode=n>=89&&n<=103?7:n>=57&&n<=71?6:r;
+ const big=document.getElementById("big");
+ big.style.background=C[k][1];
+ big.innerHTML=`<small>${n}</small><b>${d[0]}</b><small>${d[2]}</small>`;
+ document.getElementById("txt").innerHTML=`<h2>${d[1]}</h2><p>${d[3]}</p>
+ <div class="meta"><span>Nomor atom: ${n}</span><span>Massa atom: ${d[2]}</span><span>Golongan: ${f?"Blok-f":golongan}</span><span>Periode: ${periode}</span><span>${C[k][0]}</span><span>Fase: ${fase(n)}</span><span>Kulit elektron: ${shells(n).join(", ")}</span></div>
+ <p class="sub" id="note" style="margin:10px 0 0"></p>`;
+ draw3D(n);
+}
+function apply(){
+ const t=q.value.trim().toLowerCase();
+ btns.forEach((b,i)=>{
+  const d=D[i],n=i+1;
+  const okQ=!t||d[0].toLowerCase()==t||d[1].toLowerCase().includes(t)||String(n)==t;
+  const okF=!filter||cat(n)==filter;
+  b.classList.toggle("dim",!(okQ&&okF));
+ });
+}
+q.oninput=apply;
+Object.entries(C).forEach(([k,[nm,col]])=>{
+ const b=document.createElement("button");
+ b.textContent=nm;b.style.background=col;
+ b.onclick=()=>{filter=filter==k?null:k;[...leg.children].forEach(x=>x.classList.remove("on"));if(filter)b.classList.add("on");apply()};
+ leg.appendChild(b);
+});
+const SH={24:"2,8,13,1",29:"2,8,18,1",41:"2,8,18,12,1",42:"2,8,18,13,1",44:"2,8,18,15,1",45:"2,8,18,16,1",46:"2,8,18,18",47:"2,8,18,18,1",57:"2,8,18,18,9,2",58:"2,8,18,19,9,2",64:"2,8,18,25,9,2",78:"2,8,18,32,17,1",79:"2,8,18,32,18,1",89:"2,8,18,32,18,9,2",90:"2,8,18,32,18,10,2",91:"2,8,18,32,20,9,2",92:"2,8,18,32,21,9,2",93:"2,8,18,32,22,9,2",96:"2,8,18,32,25,9,2",103:"2,8,18,32,32,8,3"};
+const ORD=[[1,0],[2,0],[2,1],[3,0],[3,1],[4,0],[3,2],[4,1],[5,0],[4,2],[5,1],[6,0],[4,3],[5,2],[6,1],[7,0],[5,3],[6,2],[7,1]];
+function shells(n){
+ if(SH[n])return SH[n].split(",").map(Number);
+ let r=n;const s=[];
+ for(const [p,l] of ORD){if(r<=0)break;const c=Math.min(r,2*(2*l+1));s[p-1]=(s[p-1]||0)+c;r-=c}
+ return s.map(x=>x||0);
+}
+const v=document.getElementById("v3d");
+let R,Sc,Cam,root,G,MP,MN,ME,MR,pivots=[],disp=[],auto=true,rx=0.5,ry=0,curN=1,mode="atom";
+if(window.THREE){
+ R=new THREE.WebGLRenderer({antialias:true,alpha:true});
+ R.setPixelRatio(Math.min(window.devicePixelRatio||1,2));R.setSize(200,200);v.appendChild(R.domElement);
+ Sc=new THREE.Scene();Cam=new THREE.PerspectiveCamera(45,1,.1,100);
+ Sc.add(new THREE.AmbientLight(0xffffff,.7));
+ const L=new THREE.DirectionalLight(0xffffff,.8);L.position.set(3,4,5);Sc.add(L);
+ root=new THREE.Group();Sc.add(root);
+ G=new THREE.SphereGeometry(1,14,14);
+ MP=new THREE.MeshLambertMaterial({color:0xe5484d});
+ MN=new THREE.MeshLambertMaterial({color:0x8e9aab});
+ ME=new THREE.MeshLambertMaterial({color:0x2ea8ff});
+ MR=new THREE.MeshBasicMaterial({color:0x8a94a6});
+ let dn=false,lx=0,ly=0;
+ v.onpointerdown=e=>{dn=true;auto=false;lx=e.clientX;ly=e.clientY;v.setPointerCapture(e.pointerId)};
+ v.onpointermove=e=>{if(!dn)return;ry+=(e.clientX-lx)*.01;rx+=(e.clientY-ly)*.01;lx=e.clientX;ly=e.clientY};
+ v.onpointerup=v.onpointercancel=()=>{dn=false};
+ (function loop(){
+  requestAnimationFrame(loop);
+  if(auto)ry+=.005;
+  root.rotation.set(rx,ry,0);
+  pivots.forEach((p,i)=>{p.rotation.z+=0.02/(i+1)+0.004});
+  R.render(Sc,Cam);
+ })();
+}else{v.textContent="3D tidak didukung di perangkat ini";v.style.padding="12px";v.style.fontSize=".8rem"}
+function draw3D(n){
+ if(!window.THREE)return;
+ curN=n;root.clear();disp.forEach(g=>g.dispose());disp=[];pivots=[];
+ if(mode=="zat"){drawZat(n);return}
+ document.getElementById("note").textContent="Model atom 3D: merah = proton, abu-abu = neutron, biru = elektron (jumlah proton dan neutron di inti dibatasi agar tetap ringan).";
+ const sh=shells(n);
+ const np=Math.min(n,36);
+ const nn=Math.min(Math.max(Math.round(parseFloat(D[n-1][2].replace(",","."))-n),0),36);
+ const tot=np+nn,rad=.12*Math.cbrt(tot)+.12;
+ let a=0,b=0;
+ for(let i=0;i<tot;i++){
+  const pr=(i%2==0&&a<np)||b>=nn;
+  if(pr)a++;else b++;
+  const m=new THREE.Mesh(G,pr?MP:MN);
+  const u=Math.random()*2-1,t=Math.random()*Math.PI*2,s=Math.sqrt(1-u*u),d=rad*Math.cbrt(Math.random());
+  m.position.set(d*s*Math.cos(t),d*s*Math.sin(t),d*u);
+  m.scale.setScalar(.1);
+  root.add(m);
+ }
+ sh.forEach((cnt,i)=>{
+  if(!cnt)return;
+  const r=1.2+.5*i,g=new THREE.Group();
+  g.rotation.set(i*.6,i*.9,0);root.add(g);
+  const tg=new THREE.TorusGeometry(r,.008,6,72);disp.push(tg);
+  g.add(new THREE.Mesh(tg,MR));
+  const pv=new THREE.Group();g.add(pv);pivots.push(pv);
+  for(let j=0;j<cnt;j++){
+   const ang=Math.PI*2*j/cnt,e=new THREE.Mesh(G,ME);
+   e.position.set(r*Math.cos(ang),r*Math.sin(ang),0);e.scale.setScalar(.06);pv.add(e);
+  }
+ });
+ const rmax=1.2+.5*(sh.length-1);
+ Cam.position.set(0,0,rmax*2.4+1);Cam.lookAt(0,0,0);
+}
+const ZC={79:0xffc933,47:0xdadde2,29:0xb87333,26:0x8a8f96,13:0xc4c9ce,82:0x5b6068,50:0xc8ccd0,30:0xaab0b8,28:0xaeb4b8,22:0x9aa0a8,78:0xdfe2e5,80:0xc9ced4,55:0xe0c880,24:0xb8bec6,25:0xa8a0b0,12:0xc0c4c8,20:0xc8c8c0,6:0x2b2b2e,15:0xd94a3a,16:0xf2e04a,14:0x6a7078,5:0x3a3a3a,53:0x3b2b4f,35:0x8b2f1a,17:0xc8e06a,9:0xe8f0a0,8:0xa8d8ff,7:0xcfe3ff,1:0xe6f0ff,2:0xfff2c0,10:0xff6a3a,18:0xb48cff,36:0xe8e8ff,54:0x8ab4ff,86:0xa0ffa0,34:0x7a2f2f,33:0x707880,51:0x9aa0a8,52:0x8a8f8a,32:0x8a9098,27:0x5a6a9a,83:0xc8a8b0,29.5:0};
+function drawZat(n){
+ const k=cat(n),f=fase(n),sym=D[n-1][0];
+ const col=ZC[n]!==undefined?ZC[n]:(k=="m"?0x6a7078:k=="n"?0xdddddd:0xb4bac2);
+ const mk=o=>{const m=new THREE.MeshPhongMaterial(o);disp.push(m);return m};
+ const add=(g,m,x,y,z)=>{disp.push(g);const o=new THREE.Mesh(g,m);o.position.set(x,y,z);root.add(o);return o};
+ let txt;
+ if(f=="Gas"||f=="Cair"){
+  const gas=f=="Gas",h=gas?1.9:1.2,y=gas?0:-.4;
+  add(new THREE.CylinderGeometry(.8,.8,2,32),mk({color:0xcfe8ff,transparent:true,opacity:.22,side:THREE.DoubleSide,depthWrite:false,shininess:100}),0,0,0);
+  add(new THREE.CylinderGeometry(.74,.74,h,32),mk({color:col,transparent:gas,opacity:gas?.55:1,shininess:gas?20:100,specular:0xffffff,depthWrite:!gas}),0,y,0);
+  if(gas)add(new THREE.CylinderGeometry(.82,.82,.16,32),mk({color:0x555b63}),0,1.08,0);
+  txt=gas?"Wujud: gas di dalam tabung kaca":"Wujud: cairan di dalam gelas kimia";
+ }else if(k=="m"||k=="n"||k=="h"){
+  const lm=mk({color:col,flatShading:true,shininess:25});
+  for(let i=0;i<16;i++){
+   const x=(Math.random()-.5)*1.7,z=(Math.random()-.5)*1.7,hg=Math.max(0,1-Math.hypot(x,z)/1.0);
+   const o=add(new THREE.IcosahedronGeometry(.25+Math.random()*.2,0),lm,x,-.7+hg*.9,z);
+   o.rotation.set(Math.random()*3,Math.random()*3,0);
+  }
+  txt="Wujud: bongkahan atau serpihan padat";
+ }else{
+  const bm=mk({color:col,specular:0xffffff,shininess:90});
+  const bg=new THREE.CylinderGeometry(.55,.75,.5,4,1);bg.rotateY(Math.PI/4);bg.scale(1.9,1,.8);
+  disp.push(bg);
+  [[-.5,-.46],[-.5,.46],[0,0]].forEach(([y,z])=>{const o=new THREE.Mesh(bg,bm);o.position.set(0,y,z);root.add(o)});
+  const cv=document.createElement("canvas");cv.width=256;cv.height=128;
+  const cx=cv.getContext("2d");cx.fillStyle="rgba(0,0,0,.55)";cx.font="bold 90px sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillText(sym,128,68);
+  const tx=new THREE.CanvasTexture(cv);disp.push(tx);
+  const pl=add(new THREE.PlaneGeometry(1.2,.6),new THREE.MeshBasicMaterial({map:tx,transparent:true}),0,.256,0);
+  pl.rotation.x=-Math.PI/2;
+  txt="Wujud: logam padat berbentuk batangan";
+ }
+ txt+=" (ilustrasi; warna dan bentuk asli bisa berbeda).";
+ if(n>=104)txt+=" Unsur ini belum pernah dibuat dalam jumlah yang terlihat, jadi tampilannya hanya perkiraan.";
+ else if(n>=89||[43,61,84,85,86,87,88].includes(n))txt+=" Unsur ini radioaktif dan berbahaya jika ditangani langsung.";
+ document.getElementById("note").textContent=txt;
+ Cam.position.set(0,0,6.5);Cam.lookAt(0,0,0);
+}
+document.querySelectorAll("#tg button").forEach(b=>{
+ b.onpointerdown=e=>e.stopPropagation();
+ b.onclick=()=>{mode=b.dataset.m;document.querySelectorAll("#tg button").forEach(x=>x.classList.toggle("on",x==b));draw3D(curN)};
+});
+show(1);
+</script>
+</body>
+</html>
